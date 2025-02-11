@@ -7,10 +7,15 @@ export default function Header() {
   const router = useRouter();
 
   const handleLogout = async () => {
-    await signOut(auth);
-    localStorage.removeItem("adminToken");
-    router.push("/admin");
+    try {
+      await signOut(auth);
+      localStorage.clear(); // Clear any stored session data
+      router.replace("/admin/login"); // Redirect to login after logout
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
   };
+
 
   return (
     <header className="flex justify-between bg-white p-4 shadow-md rounded-lg">

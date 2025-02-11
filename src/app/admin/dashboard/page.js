@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { db, auth } from "@/lib/firebase";
 import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
+import AdminProtected from "@/components/AdminProtected";
+
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Sidebar from "@/components/Sidebar";
@@ -42,6 +44,7 @@ export default function AdminDashboard() {
   }, []);
 
   return (
+    <AdminProtected>
     <div className="flex">
       <Sidebar />
       <div className="flex-1 p-6 bg-gray-100 min-h-screen">
@@ -64,5 +67,6 @@ export default function AdminDashboard() {
         </div>
       </div>
     </div>
+      </AdminProtected>
   );
 }

@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
 import Link from "next/link";
 import { db } from "@/lib/firebase";
+import AdminProtected from "@/components/AdminProtected";
+
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Sidebar from "@/components/Sidebar";
@@ -31,6 +33,7 @@ export default function StudentsList() {
   };
 
   return (
+    <AdminProtected>
     <div className="flex">
       <Sidebar />
       <div className="flex-1 p-6">
@@ -72,5 +75,6 @@ export default function StudentsList() {
         <Footer />
       </div>
     </div>
+    </AdminProtected>
   );
 }

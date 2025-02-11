@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "crypto-js": "^4.2.0",
     "firebase": "^11.2.0",
     "html5-qrcode": "^2.3.8",
     "next": "15.1.6",
