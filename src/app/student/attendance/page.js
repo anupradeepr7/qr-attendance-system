@@ -1,20 +1,45 @@
 "use client";
 import { useState } from "react";
 import { db } from "@/lib/firebase";
-import { collection, addDoc } from "firebase/firestore";
+import { doc, getDoc, collection, addDoc } from "firebase/firestore";
 import { Html5QrcodeScanner } from "html5-qrcode";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { useSession } from "next-auth/react";
 
 export default function StudentPanel() {
   const [scanResult, setScanResult] = useState("");
+  const { data: session } = useSession();
 
   const handleScanSuccess = async (decodedText) => {
     setScanResult(decodedText);
+    
+    if (!session?.user?.email) {
+      alert("Error: No student email found!");
+      return;
+    }
+
+    // Fetch student details from Firestore
+    const studentRef = doc(db, "students", session.user.email);
+    const studentSnap = await getDoc(studentRef);
+
+    if (!studentSnap.exists()) {
+      alert("Error: Student not found!");
+      return;
+    }
+
+    const studentData = studentSnap.data();
+
+    // Add attendance record
     await addDoc(collection(db, "attendance"), {
       sessionId: decodedText,
-      timestamp: new Date(),
+      email: session.user.email,
+      departmentId: studentData.department,
+      rollNo: studentData.rollNo,
+      punchTime: new Date(),
+      date: new Date().toISOString().split("T")[0], // Store only the date
     });
+
     alert("Attendance marked successfully!");
   };
 
@@ -43,3 +68,5 @@ export default function StudentPanel() {
     </div>
   );
 }
+
+
