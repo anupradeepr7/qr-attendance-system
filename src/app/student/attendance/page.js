@@ -1,72 +1,101 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, collection, addDoc } from "firebase/firestore";
+import StudentHeader from "@/components/StudentHeader";
+import StudentFooter from "@/components/StudentFooter";
+import StudentSidebar from "@/components/StudentSidebar";
 import { Html5QrcodeScanner } from "html5-qrcode";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import { useSession } from "next-auth/react";
+import { FaQrcode, FaCheckCircle, FaSyncAlt } from "react-icons/fa";
 
-export default function StudentPanel() {
+export default function StudentAttendance() {
   const [scanResult, setScanResult] = useState("");
-  const { data: session } = useSession();
+  const [error, setError] = useState("");
+  const [cameraFacingMode, setCameraFacingMode] = useState("environment"); // Back Camera
 
-  const handleScanSuccess = async (decodedText) => {
-    setScanResult(decodedText);
-    
-    if (!session?.user?.email) {
-      alert("Error: No student email found!");
-      return;
-    }
-
-    // Fetch student details from Firestore
-    const studentRef = doc(db, "students", session.user.email);
-    const studentSnap = await getDoc(studentRef);
-
-    if (!studentSnap.exists()) {
-      alert("Error: Student not found!");
-      return;
-    }
-
-    const studentData = studentSnap.data();
-
-    // Add attendance record
-    await addDoc(collection(db, "attendance"), {
-      sessionId: decodedText,
-      email: session.user.email,
-      departmentId: studentData.department,
-      rollNo: studentData.rollNo,
-      punchTime: new Date(),
-      date: new Date().toISOString().split("T")[0], // Store only the date
+  useEffect(() => {
+    const scanner = new Html5QrcodeScanner("qr-reader", {
+      fps: 10,
+      qrbox: 250,
+      facingMode: cameraFacingMode, // Use back camera by default
     });
 
-    alert("Attendance marked successfully!");
+    scanner.render(
+      (decodedText) => {
+        handleScan(decodedText);
+        scanner.clear();
+      },
+      (err) => {
+        console.warn("QR Scan Error:", err);
+        setError("❌ Camera access error. Please allow permissions.");
+      }
+    );
+
+    return () => scanner.clear(); // Cleanup when unmounting
+  }, [cameraFacingMode]);
+
+  const handleScan = async (decodedText) => {
+    setScanResult(decodedText);
+    setError("");
+
+    try {
+      await addDoc(collection(db, "attendance"), {
+        rollNo: decodedText,
+        punchTime: new Date().toLocaleTimeString(),
+        timestamp: serverTimestamp(),
+      });
+      alert("✅ Attendance Marked Successfully!");
+    } catch (err) {
+      console.error("Error marking attendance:", err);
+      setError("❌ Failed to mark attendance. Try again.");
+    }
   };
 
-  const startScanner = () => {
-    const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
-    scanner.render(handleScanSuccess);
+  // Toggle between front & back camera
+  const toggleCamera = () => {
+    setCameraFacingMode((prev) => (prev === "environment" ? "user" : "environment"));
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header userType="student" />
-      <main className="flex-grow container mx-auto p-6">
-        <div className="bg-white p-6 rounded-lg shadow-md text-center">
-          <h1 className="text-2xl font-bold">Student Panel</h1>
+    <div className="flex">
+      <StudentSidebar />
+      <div className="flex-1 p-6 min-h-screen bg-gray-100">
+        <StudentHeader />
+        <div className="max-w-3xl mx-auto bg-white shadow-lg rounded-lg p-8">
+          <h1 className="text-3xl font-bold text-center text-blue-600 flex items-center justify-center gap-2">
+            <FaQrcode /> Mark Your Attendance
+          </h1>
+          <p className="text-center text-gray-600 mb-4">
+            Align the QR code in the camera view to mark your attendance.
+          </p>
+
+          {/* QR Scanner */}
+          <div id="qr-reader" className="w-full flex justify-center"></div>
+
+          {/* Toggle Camera Button */}
           <button
-            onClick={startScanner}
-            className="bg-blue-600 text-white px-4 py-2 rounded mt-4"
+            onClick={toggleCamera}
+            className="mt-4 bg-gray-700 hover:bg-gray-900 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 mx-auto"
           >
-            Scan QR Code
+            <FaSyncAlt /> Switch Camera
           </button>
-          <div id="reader" className="mt-6"></div>
-          {scanResult && <p className="mt-4 font-semibold">Scanned: {scanResult}</p>}
+
+          {/* Scan Success Message */}
+          {scanResult && (
+            <div className="mt-6 text-center">
+              <h2 className="text-xl font-semibold text-green-600 flex items-center justify-center gap-2">
+                <FaCheckCircle /> Attendance Marked!
+              </h2>
+              <p className="text-gray-700">📌 Roll No: <b>{scanResult}</b></p>
+              <p className="text-gray-700">🕒 Punch Time: <b>{new Date().toLocaleTimeString()}</b></p>
+            </div>
+          )}
+
+          {/* Error Message */}
+          {error && <p className="text-red-500 text-center mt-4">{error}</p>}
         </div>
-      </main>
-      <Footer />
+        <StudentFooter />
+      </div>
     </div>
   );
 }
-
-
