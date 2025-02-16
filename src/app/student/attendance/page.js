@@ -2,58 +2,76 @@
 import { useEffect, useState } from "react";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import CryptoJS from "crypto-js";
 import StudentHeader from "@/components/StudentHeader";
 import StudentFooter from "@/components/StudentFooter";
 import StudentSidebar from "@/components/StudentSidebar";
 import { Html5QrcodeScanner } from "html5-qrcode";
 import { FaQrcode, FaCheckCircle, FaSyncAlt } from "react-icons/fa";
 
+const SECRET_KEY = process.env.NEXT_PUBLIC_SECRET_KEY || "default-secret";
+
 export default function StudentAttendance() {
   const [scanResult, setScanResult] = useState("");
   const [error, setError] = useState("");
-  const [cameraFacingMode, setCameraFacingMode] = useState("environment"); // Back Camera
+  const [cameraFacingMode, setCameraFacingMode] = useState("environment"); // ✅ Back Camera Default
+  const [scanner, setScanner] = useState(null);
 
   useEffect(() => {
-    const scanner = new Html5QrcodeScanner("qr-reader", {
-      fps: 10,
-      qrbox: 250,
-      facingMode: cameraFacingMode, // Use back camera by default
-    });
+    if (!scanner) {
+      const qrScanner = new Html5QrcodeScanner("qr-reader", {
+        fps: 10,
+        qrbox: 250,
+        facingMode: cameraFacingMode, // ✅ Back Camera
+      });
 
-    scanner.render(
-      (decodedText) => {
-        handleScan(decodedText);
-        scanner.clear();
-      },
-      (err) => {
-        console.warn("QR Scan Error:", err);
-        setError("❌ Camera access error. Please allow permissions.");
-      }
-    );
+      qrScanner.render(
+        async (decodedText) => {
+          qrScanner.pause();
+          await handleScan(decodedText);
+          qrScanner.resume();
+        },
+        (err) => {
+          console.warn("QR Scan Error:", err);
+          setError("❌ Camera access error. Please allow permissions.");
+        }
+      );
 
-    return () => scanner.clear(); // Cleanup when unmounting
-  }, [cameraFacingMode]);
+      setScanner(qrScanner);
+    }
+
+    return () => {
+      if (scanner) scanner.clear();
+    };
+  }, [cameraFacingMode, scanner]);
 
   const handleScan = async (decodedText) => {
-    setScanResult(decodedText);
-    setError("");
-
     try {
+      const bytes = CryptoJS.AES.decrypt(decodedText, SECRET_KEY);
+      const decryptedTimestamp = bytes.toString(CryptoJS.enc.Utf8);
+
+      if (!decryptedTimestamp) {
+        setError("❌ Invalid QR Code! Please try again.");
+        return;
+      }
+
+      // ✅ Save attendance
       await addDoc(collection(db, "attendance"), {
-        rollNo: decodedText,
-        punchTime: new Date().toLocaleTimeString(),
         timestamp: serverTimestamp(),
       });
-      alert("✅ Attendance Marked Successfully!");
-    } catch (err) {
-      console.error("Error marking attendance:", err);
-      setError("❌ Failed to mark attendance. Try again.");
+
+      setScanResult("✅ Attendance Marked Successfully!");
+      setError("");
+    } catch (error) {
+      console.error("Error processing QR code:", error);
+      setError("❌ Invalid QR Code! Please try again.");
     }
   };
 
-  // Toggle between front & back camera
+  // Toggle Front/Back Camera
   const toggleCamera = () => {
     setCameraFacingMode((prev) => (prev === "environment" ? "user" : "environment"));
+    setScanner(null); // Reset scanner to apply new camera mode
   };
 
   return (
@@ -84,10 +102,8 @@ export default function StudentAttendance() {
           {scanResult && (
             <div className="mt-6 text-center">
               <h2 className="text-xl font-semibold text-green-600 flex items-center justify-center gap-2">
-                <FaCheckCircle /> Attendance Marked!
+                <FaCheckCircle /> {scanResult}
               </h2>
-              <p className="text-gray-700">📌 Roll No: <b>{scanResult}</b></p>
-              <p className="text-gray-700">🕒 Punch Time: <b>{new Date().toLocaleTimeString()}</b></p>
             </div>
           )}
 

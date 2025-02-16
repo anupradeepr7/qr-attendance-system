@@ -65,6 +65,7 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
+        <Footer />
       </div>
     </div>
       </AdminProtected>

@@ -59,7 +59,7 @@ export default function StudentsList() {
                   <td className="border border-gray-300 p-2">{student.email}</td>
                   <td className="border border-gray-300 p-2">{student.dob}</td>
                   <td className="border border-gray-300 p-2">
-                    <Link href={`/admin/students/edit/${student.id}`}>
+                    <Link href={`/admin/students/edit/${student.rollNo}`}>
                       <button className="bg-yellow-500 text-white px-3 py-1 rounded mx-1">✏ Edit</button>
                     </Link>
                     <button onClick={() => handleDelete(student.id)} className="bg-red-500 text-white px-3 py-1 rounded mx-1">

@@ -16,6 +16,11 @@ export default function Sidebar() {
               <span className="block px-4 py-2 hover:bg-gray-700 rounded">📚 Manage Students</span>
             </Link>
           </li>
+          <li className="mb-2">
+            <Link href="/admin/attendance">
+              <span className="block px-4 py-2 hover:bg-gray-700 rounded">📅 Attendance</span>
+            </Link>
+          </li>
           <li>
             <Link href="/admin/logout">
               <span className="block px-4 py-2 bg-red-600 rounded">🚪 Logout</span>
