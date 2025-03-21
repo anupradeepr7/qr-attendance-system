@@ -96,7 +96,7 @@ export default function EditStudent() {
       <Sidebar />
       <div className="flex-1 p-6">
         <Header />
-        <div className="bg-white p-6 rounded-lg shadow-lg max-w-2xl mx-auto">
+        <div className="bg-white p-6 rounded-lg shadow-lg">
           <h1 className="text-2xl font-bold text-center">Edit Student</h1>
           <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4 mt-4">
             {/* Left Column */}

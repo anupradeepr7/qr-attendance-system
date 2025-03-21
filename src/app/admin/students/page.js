@@ -11,15 +11,17 @@ import Sidebar from "@/components/Sidebar";
 
 export default function StudentsList() {
   const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchStudents = async () => {
       const studentsSnapshot = await getDocs(collection(db, "students"));
       const studentsData = studentsSnapshot.docs.map((doc) => ({
-        id: doc.id, // Use Firebase document ID
+        id: doc.id,
         ...doc.data(),
       }));
       setStudents(studentsData);
+      setLoading(false);
     };
 
     fetchStudents();
@@ -33,55 +35,64 @@ export default function StudentsList() {
   };
 
   return (
-    <AdminProtected>
-      <div className="flex">
-        <Sidebar />
-        <div className="flex-1 p-6">
-          <Header />
-          <div className="bg-white p-6 rounded-lg shadow-lg">
-            <h1 className="text-2xl font-bold">Manage Students</h1>
+    <div className="flex">
+      <Sidebar />
+      <div className="flex-1 p-6">
+        <Header />
+        <div className="bg-white p-6 rounded-lg shadow-lg">
+          <h1 className="text-3xl font-bold text-center text-gray-700 mb-6">Manage Students</h1>
+          <div className="flex justify-end mb-4">
             <Link href="/admin/students/add">
-              <button className="bg-blue-500 text-white px-4 py-2 rounded mt-4">➕ Add Student</button>
+              <button className="bg-gradient-to-r from-blue-500 to-purple-500 text-white py-2 px-6 rounded-full text-lg font-semibold hover:scale-105 transition transform">
+                ➕ Add Student
+              </button>
             </Link>
-            <table className="w-full mt-6 border-collapse border border-gray-300">
-              <thead>
-                <tr className="bg-gray-200">
-                  <th className="border border-gray-300 p-2">Roll Number</th>
-                  <th className="border border-gray-300 p-2">Name</th>
-                  <th className="border border-gray-300 p-2">Date of Birth</th>
-                  <th className="border border-gray-300 p-2">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {students.map((student) => (
-                  <tr key={student.id || student.rollNo} className="text-center bg-white hover:bg-gray-100">
-                    <td className="border border-gray-300 p-2">{student.rollNo}</td>
-                    <td className="border border-gray-300 p-2">{student.name}</td>
-                    <td className="border border-gray-300 p-2">{student.dob}</td>
-                    <td className="border border-gray-300 p-2">
-                      <Link href={`/admin/students/edit/${student.rollNo}`}>
-                        <button className="bg-yellow-500 text-white px-3 py-1 rounded mx-1">✏ Edit</button>
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(student.rollNo)}
-                        className="bg-red-500 text-white px-3 py-1 rounded mx-1"
-                      >
-                        🗑 Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {students.length === 0 && (
-                  <tr>
-                    <td colSpan="4" className="p-4 text-gray-600 text-center">No students found.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
           </div>
-          <Footer />
+          {loading ? (
+            <p className="text-center text-gray-500">Loading students...</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse border border-gray-300">
+                <thead>
+                  <tr className="bg-gray-200 text-gray-700">
+                    <th className="border border-gray-300 p-3">Roll Number</th>
+                    <th className="border border-gray-300 p-3">Name</th>
+                    <th className="border border-gray-300 p-3">Date of Birth</th>
+                    <th className="border border-gray-300 p-3 text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {students.length > 0 ? (
+                    students.map((student) => (
+                      <tr key={student.id} className="text-center bg-white hover:bg-gray-100">
+                        <td className="border border-gray-300 p-3">{student.rollNo}</td>
+                        <td className="border border-gray-300 p-3">{student.name}</td>
+                        <td className="border border-gray-300 p-3">{student.dob}</td>
+                        <td className="border border-gray-300 p-3">
+                          <Link href={`/admin/students/edit/${student.rollNo}`}>
+                            <button className="bg-yellow-500 text-white px-3 py-1 rounded mx-1 hover:scale-105 transition">✏ Edit</button>
+                          </Link>
+                          <button
+                            onClick={() => handleDelete(student.rollNo)}
+                            className="bg-red-500 text-white px-3 py-1 rounded mx-1 hover:scale-105 transition"
+                          >
+                            🗑 Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="4" className="p-4 text-gray-600 text-center">No students found.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
+        <Footer />
       </div>
-    </AdminProtected>
+    </div> 
   );
 }

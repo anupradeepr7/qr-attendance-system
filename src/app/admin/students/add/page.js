@@ -68,11 +68,11 @@ export default function AddStudent() {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
-      <Sidebar /> {/* ✅ Fixed Sidebar */}
-      <div className="flex-1 p-6 ml-64"> {/* ✅ Adds left margin to prevent overlap */}
+    <div className="flex">
+      <Sidebar />
+      <div className="flex-1 p-6">
         <Header />
-        <div className="max-w-3xl mx-auto bg-white/70 backdrop-blur-lg p-8 rounded-lg shadow-xl border border-gray-200">
+        <div className="bg-white p-6 rounded-lg shadow-lg">
           <h1 className="text-3xl font-bold text-center text-gray-700 mb-6">Add Student</h1>
 
           <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-6">
