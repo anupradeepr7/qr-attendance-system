@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { collection, doc, setDoc } from "firebase/firestore";
+import { collection, doc, setDoc, getDocs, query, where, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
@@ -9,7 +9,6 @@ import Sidebar from "@/components/Sidebar";
 
 export default function AddStudent() {
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
   const [dob, setDob] = useState("");
   const [gender, setGender] = useState("");
   const [department, setDepartment] = useState("");
@@ -21,21 +20,51 @@ export default function AddStudent() {
 
   const router = useRouter();
 
-  // Function to generate roll number
   useEffect(() => {
-    if (year && department) {
-      const currentYear = new Date().getFullYear().toString().slice(-2);
-      const deptCode = department.slice(0, 3).toUpperCase();
-      const randomNum = Math.floor(100 + Math.random() * 900); // Random 3-digit number
-      setRollNo(`${currentYear}${deptCode}${randomNum}`);
-    }
+    const generateRollNo = async () => {
+      if (!year || !department) return;
+  
+      const admissionYear = new Date().getFullYear().toString().slice(-2); // Extracts last two digits (e.g., "25" for 2025)
+      const ugOrPg = department.includes("M") ? "02" : "01"; // PG = 02, UG = 01
+      const deptCode = {
+        "BSc CS": "101",
+        "BA English": "102",
+        "BBA": "103",
+        "BCom": "104",
+        "MSc CS": "201",
+        "MCA": "202",
+        "MBA": "203",
+      }[department] || "999"; // Default code for unknown dept
+  
+      // Query only the last student from the same department
+      const studentsRef = collection(db, "students");
+      const q = query(
+        studentsRef,
+        where("department", "==", department), // Filter by same department
+        orderBy("rollNo", "desc"),
+        limit(1)
+      );
+      const snapshot = await getDocs(q);
+      let serialNumber = "001";
+  
+      if (!snapshot.empty) {
+        const lastRollNo = snapshot.docs[0].data().rollNo;
+        const lastSerial = parseInt(lastRollNo.slice(-3));
+        serialNumber = String(lastSerial + 1).padStart(3, "0");
+      }
+  
+      setRollNo(`${admissionYear}${ugOrPg}${deptCode}${serialNumber}`);
+    };
+  
+    generateRollNo();
   }, [year, department]);
+  
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!rollNo) return alert("Roll number generation failed!");
 
     const studentData = {
-      email, // Store email inside the document
       rollNo,
       name,
       gender,
@@ -47,7 +76,7 @@ export default function AddStudent() {
       status,
     };
 
-    await setDoc(doc(db, "students", email), studentData);
+    await setDoc(doc(db, "students", rollNo), studentData);
     router.push("/admin/students");
   };
 
@@ -59,13 +88,9 @@ export default function AddStudent() {
         <div className="bg-white p-6 rounded-lg shadow-lg max-w-2xl mx-auto">
           <h1 className="text-2xl font-bold text-center">Add Student</h1>
           <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4 mt-4">
-            {/* Left Column */}
             <div>
               <label className="block">Name</label>
               <input type="text" className="w-full p-2 border rounded" value={name} onChange={(e) => setName(e.target.value)} required />
-
-              <label className="block mt-4">Email</label>
-              <input type="email" className="w-full p-2 border rounded" value={email} onChange={(e) => setEmail(e.target.value)} required />
 
               <label className="block mt-4">Date of Birth</label>
               <input type="date" className="w-full p-2 border rounded" value={dob} onChange={(e) => setDob(e.target.value)} required />
@@ -78,14 +103,17 @@ export default function AddStudent() {
               </select>
             </div>
 
-            {/* Right Column */}
             <div>
               <label className="block">Department</label>
               <select className="w-full p-2 border rounded" value={department} onChange={(e) => setDepartment(e.target.value)} required>
                 <option value="">Select Department</option>
-                <option value="Msccs">M.Sc Computer Science</option>
-                <option value="Btech">B.Tech</option>
-                <option value="Bscit">B.Sc IT</option>
+                <option value="BSc CS">B.Sc Computer Science</option>
+                <option value="BA English">BA English</option>
+                <option value="BBA">BBA</option>
+                <option value="BCom">B.Com</option>
+                <option value="MSc CS">M.Sc Computer Science</option>
+                <option value="MCA">MCA</option>
+                <option value="MBA">MBA</option>
               </select>
 
               <label className="block mt-4">Year</label>
@@ -118,7 +146,6 @@ export default function AddStudent() {
               </select>
             </div>
 
-            {/* Submit Button (Full Width) */}
             <div className="col-span-2 text-center">
               <button type="submit" className="bg-blue-500 text-white px-6 py-2 rounded">Save</button>
             </div>

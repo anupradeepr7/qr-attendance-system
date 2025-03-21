@@ -31,14 +31,43 @@ export default function AttendancePage() {
     fetchAttendance();
   }, []);
 
-  // Apply filters based on Roll Number and Date
+  // ✅ Format Timestamp Correctly
+  const formatDate = (timestamp) => {
+    if (!timestamp || !timestamp.toDate) return "N/A";
+    const date = timestamp.toDate();
+    return {
+      date: date.toLocaleDateString("en-CA"), // YYYY-MM-DD format for search
+      time: date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+    };
+  };
+
+  // ✅ Apply Filters
   const filteredAttendance = attendance.filter((record) => {
-    const punchDate = new Date(record.punchTime).toLocaleDateString("en-CA"); // Format as YYYY-MM-DD
+    const formatted = formatDate(record.punchTime);
     return (
       (searchRollNo === "" || record.rollNo.toLowerCase().includes(searchRollNo.toLowerCase())) &&
-      (searchDate === "" || punchDate === searchDate)
+      (searchDate === "" || formatted.date === searchDate)
     );
   });
+
+  // ✅ Export to CSV (Date First, Time Second)
+  const exportToCSV = () => {
+    const csvRows = [];
+    const headers = ["Roll Number", "Student Name", "Email", "Date", "Punch Time"];
+    csvRows.push(headers.join(","));
+
+    filteredAttendance.forEach((record) => {
+      const formatted = formatDate(record.punchTime);
+      csvRows.push([record.rollNo, record.name || "N/A", record.email || "N/A", formatted.date, formatted.time].join(","));
+    });
+
+    const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "attendance.csv";
+    a.click();
+  };
 
   return (
     <div className="flex">
@@ -46,9 +75,9 @@ export default function AttendancePage() {
       <div className="flex-1 p-6">
         <Header />
         <div className="bg-white p-6 rounded-lg shadow-lg">
-          <h1 className="text-2xl font-bold mb-4">Student Attendance</h1>
+          <h1 className="text-2xl font-bold mb-4">📌 Student Attendance</h1>
 
-          {/* Filter Inputs */}
+          {/* 🔎 Filters */}
           <div className="mb-4 flex gap-4">
             <input
               type="text"
@@ -72,42 +101,55 @@ export default function AttendancePage() {
             >
               Reset
             </button>
+            <button className="p-2 bg-green-500 text-white rounded" onClick={exportToCSV}>
+              📥 Export CSV
+            </button>
           </div>
 
-          {/* Attendance Table */}
+          {/* 📊 Attendance Summary */}
+          <div className="mb-4 text-lg font-semibold">
+            Total Attendance Records: <span className="text-blue-600">{filteredAttendance.length}</span>
+          </div>
+
+          {/* 📜 Attendance Table */}
           {loading ? (
             <p>Loading...</p>
           ) : (
-            <table className="min-w-full bg-white border">
-              <thead>
-                <tr className="bg-gray-200">
-                  <th className="py-2 px-4 border">Roll Number</th>
-                  <th className="py-2 px-4 border">Punch Time</th>
-                  <th className="py-2 px-4 border">Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredAttendance.length === 0 ? (
-                  <tr>
-                    <td colSpan="3" className="text-center py-4">
-                      No attendance records found.
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white border border-gray-300">
+                <thead>
+                  <tr className="bg-gray-200">
+                    <th className="py-2 px-4 border">Roll Number</th>
+                    <th className="py-2 px-4 border">Student Name</th>
+                    <th className="py-2 px-4 border">Email</th>
+                    <th className="py-2 px-4 border">Date</th> {/* ⬅ Moved Date Before Time */}
+                    <th className="py-2 px-4 border">Punch Time</th>
                   </tr>
-                ) : (
-                  filteredAttendance.map((record) => (
-                    <tr key={record.id} className="border">
-                      <td className="py-2 px-4 border">{record.rollNo}</td>
-                      <td className="py-2 px-4 border">
-                        {new Date(record.punchTime).toLocaleTimeString()}
-                      </td>
-                      <td className="py-2 px-4 border">
-                        {new Date(record.punchTime).toLocaleDateString()}
+                </thead>
+                <tbody>
+                  {filteredAttendance.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="text-center py-4">
+                        No attendance records found.
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    filteredAttendance.map((record) => {
+                      const formatted = formatDate(record.punchTime);
+                      return (
+                        <tr key={record.id} className="border">
+                          <td className="py-2 px-4 border">{record.rollNo}</td>
+                          <td className="py-2 px-4 border">{record.name || "N/A"}</td>
+                          <td className="py-2 px-4 border">{record.email || "N/A"}</td>
+                          <td className="py-2 px-4 border">{formatted.date}</td> {/* ⬅ Date Column First */}
+                          <td className="py-2 px-4 border">{formatted.time}</td> {/* ⬅ Time Column Second */}
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
         <Footer />
