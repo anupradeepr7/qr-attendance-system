@@ -16,10 +16,18 @@ export default function AttendancePage() {
     const fetchAttendance = async () => {
       try {
         const attendanceSnapshot = await getDocs(collection(db, "attendance"));
-        const attendanceData = attendanceSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        const attendanceData = attendanceSnapshot.docs.map((doc) => {
+          const data = doc.data();
+
+          return {
+            id: doc.id,
+            rollNo: data.rollNo,
+            date: data.date, // Already stored as string, so no reformatting needed
+            punchIn: data.punchIn?.toDate() || null,
+            punchOut: data.punchOut?.toDate() || null,
+          };
+        });
+
         setAttendance(attendanceData);
       } catch (error) {
         console.error("Error fetching attendance:", error);
@@ -31,43 +39,40 @@ export default function AttendancePage() {
     fetchAttendance();
   }, []);
 
-  // ✅ Format Timestamp Correctly
-  const formatDate = (timestamp) => {
-    if (!timestamp || !timestamp.toDate) return "N/A";
-    const date = timestamp.toDate();
-    return {
-      date: date.toLocaleDateString("en-CA"), // YYYY-MM-DD format for search
-      time: date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
-    };
-  };
+  // ✅ Store formatted timestamps in state to avoid SSR mismatch
+  const [formattedAttendance, setFormattedAttendance] = useState([]);
+
+  useEffect(() => {
+    setFormattedAttendance(
+      attendance.map((record) => ({
+        ...record,
+        punchIn: record.punchIn
+          ? new Intl.DateTimeFormat("en-US", {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+              hour12: true,
+            }).format(record.punchIn)
+          : "N/A",
+        punchOut: record.punchOut
+          ? new Intl.DateTimeFormat("en-US", {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+              hour12: true,
+            }).format(record.punchOut)
+          : "N/A",
+      }))
+    );
+  }, [attendance]);
 
   // ✅ Apply Filters
-  const filteredAttendance = attendance.filter((record) => {
-    const formatted = formatDate(record.punchTime);
+  const filteredAttendance = formattedAttendance.filter((record) => {
     return (
       (searchRollNo === "" || record.rollNo.toLowerCase().includes(searchRollNo.toLowerCase())) &&
-      (searchDate === "" || formatted.date === searchDate)
+      (searchDate === "" || record.date === searchDate)
     );
   });
-
-  // ✅ Export to CSV (Date First, Time Second)
-  const exportToCSV = () => {
-    const csvRows = [];
-    const headers = ["Roll Number", "Student Name", "Email", "Date", "Punch Time"];
-    csvRows.push(headers.join(","));
-
-    filteredAttendance.forEach((record) => {
-      const formatted = formatDate(record.punchTime);
-      csvRows.push([record.rollNo, record.name || "N/A", record.email || "N/A", formatted.date, formatted.time].join(","));
-    });
-
-    const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "attendance.csv";
-    a.click();
-  };
 
   return (
     <div className="flex">
@@ -101,14 +106,6 @@ export default function AttendancePage() {
             >
               Reset
             </button>
-            <button className="p-2 bg-green-500 text-white rounded" onClick={exportToCSV}>
-              📥 Export CSV
-            </button>
-          </div>
-
-          {/* 📊 Attendance Summary */}
-          <div className="mb-4 text-lg font-semibold">
-            Total Attendance Records: <span className="text-blue-600">{filteredAttendance.length}</span>
           </div>
 
           {/* 📜 Attendance Table */}
@@ -120,32 +117,27 @@ export default function AttendancePage() {
                 <thead>
                   <tr className="bg-gray-200">
                     <th className="py-2 px-4 border">Roll Number</th>
-                    <th className="py-2 px-4 border">Student Name</th>
-                    <th className="py-2 px-4 border">Email</th>
-                    <th className="py-2 px-4 border">Date</th> {/* ⬅ Moved Date Before Time */}
-                    <th className="py-2 px-4 border">Punch Time</th>
+                    <th className="py-2 px-4 border">Date</th>
+                    <th className="py-2 px-4 border">Punch-In</th>
+                    <th className="py-2 px-4 border">Punch-Out</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredAttendance.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="text-center py-4">
+                      <td colSpan="4" className="text-center py-4">
                         No attendance records found.
                       </td>
                     </tr>
                   ) : (
-                    filteredAttendance.map((record) => {
-                      const formatted = formatDate(record.punchTime);
-                      return (
-                        <tr key={record.id} className="border">
-                          <td className="py-2 px-4 border">{record.rollNo}</td>
-                          <td className="py-2 px-4 border">{record.name || "N/A"}</td>
-                          <td className="py-2 px-4 border">{record.email || "N/A"}</td>
-                          <td className="py-2 px-4 border">{formatted.date}</td> {/* ⬅ Date Column First */}
-                          <td className="py-2 px-4 border">{formatted.time}</td> {/* ⬅ Time Column Second */}
-                        </tr>
-                      );
-                    })
+                    filteredAttendance.map((record) => (
+                      <tr key={record.id} className="border">
+                        <td className="py-2 px-4 border">{record.rollNo}</td>
+                        <td className="py-2 px-4 border">{record.date}</td>
+                        <td className="py-2 px-4 border">{record.punchIn}</td>
+                        <td className="py-2 px-4 border">{record.punchOut}</td>
+                      </tr>
+                    ))
                   )}
                 </tbody>
               </table>

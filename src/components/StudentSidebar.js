@@ -11,23 +11,58 @@ export default function StudentSidebar() {
   };
 
   return (
-    <aside className="w-64 bg-gray-800 text-white h-screen p-4">
-      <nav>
-        <ul>
-          <li className="mb-4">
+    <aside className="w-64 bg-gray-900 text-white h-screen fixed top-0 left-0 shadow-lg">
+      <div className="p-6 text-center border-b border-gray-700">
+        <h2 className="text-lg font-bold">🎓 Student Portal</h2>
+      </div>
+      <nav className="mt-4">
+        <ul className="space-y-2">
+          <li>
             <Link href="/student/dashboard">
-              <span className="block p-2 hover:bg-gray-700 rounded">📊 Dashboard</span>
+              <span className="block p-3 hover:bg-gray-800 rounded transition">
+                📊 Dashboard
+              </span>
             </Link>
           </li>
-          <li className="mb-4">
+          <li>
             <Link href="/student/attendance">
-              <span className="block p-2 hover:bg-gray-700 rounded">📅 My Attendance</span>
+              <span className="block p-3 hover:bg-gray-800 rounded transition">
+                ✅ Mark Attendance
+              </span>
+            </Link>
+          </li>
+          <li>
+            <Link href="/student/attendance-history">
+              <span className="block p-3 hover:bg-gray-800 rounded transition">
+                📅 Attendance History
+              </span>
+            </Link>
+          </li>
+          <li>
+            <Link href="#">
+              <span className="block p-3 hover:bg-gray-800 rounded transition">
+                👤 My Profile
+              </span>
+            </Link>
+          </li>
+          <li>
+            <Link href="#">
+              <span className="block p-3 hover:bg-gray-800 rounded transition">
+                📖 Timetable
+              </span>
+            </Link>
+          </li>
+          <li>
+            <Link href="#">
+              <span className="block p-3 hover:bg-gray-800 rounded transition">
+                📢 Announcements
+              </span>
             </Link>
           </li>
           <li className="mt-6">
             <button
               onClick={handleLogout}
-              className="w-full bg-red-500 text-white px-4 py-2 rounded hover:bg-red-700"
+              className="w-full bg-red-600 text-white px-4 py-2 rounded hover:bg-red-800 transition"
             >
               🚪 Logout
             </button>
