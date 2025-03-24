@@ -5,9 +5,9 @@ import Link from "next/link";
 import { db } from "@/lib/firebase";
 import AdminProtected from "@/components/AdminProtected";
 
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import Sidebar from "@/components/Sidebar";
+import Header from "@/components/AdminHeader";
+import Footer from "@/components/AdminFooter";
+import Sidebar from "@/components/AdminSidebar";
 
 export default function StudentsList() {
   const [students, setStudents] = useState([]);

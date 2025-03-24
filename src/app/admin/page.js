@@ -3,9 +3,9 @@ import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
 import Link from "next/link";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import Sidebar from "@/components/Sidebar";
+import Header from "@/components/AdminHeader";
+import Footer from "@/components/AdminFooter";
+import Sidebar from "@/components/AdminSidebar";
 
 export default function StudentsPage() {
   const [students, setStudents] = useState([]);

@@ -1,20 +1,22 @@
-import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
+// ✅ Ensure env variables are correctly loaded
 const firebaseConfig = {
-    apiKey: "AIzaSyCoQEn3_ruRtZtok8VmfW2lO8d6ey8ySU0",
-    authDomain: "qr-attendence-system-10ae7.firebaseapp.com",
-    projectId: "qr-attendence-system-10ae7",
-    storageBucket: "qr-attendence-system-10ae7.firebasestorage.app",
-    messagingSenderId: "769518283356",
-    appId: "1:769518283356:web:179b3dd1e9c9b48528d499",
-    measurementId: "G-3FPCE14LW9"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// ✅ Prevent multiple Firebase instances (important for Next.js)
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+const db = getFirestore(app);
 
-// Export Firebase services
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+export { auth, provider, db };

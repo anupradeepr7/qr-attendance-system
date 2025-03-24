@@ -3,9 +3,9 @@ import { useState, useEffect } from "react";
 import { collection, query, where, getDocs, updateDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useRouter, useParams } from "next/navigation";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import Sidebar from "@/components/Sidebar";
+import Header from "@/components/AdminHeader";
+import Footer from "@/components/AdminFooter";
+import Sidebar from "@/components/AdminSidebar";
 
 export default function EditStudent() {
   const router = useRouter();

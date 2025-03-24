@@ -3,9 +3,9 @@ import { useState, useEffect } from "react";
 import { collection, doc, setDoc, getDocs, query, where, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import Sidebar from "@/components/Sidebar";
+import Header from "@/components/AdminHeader";
+import Footer from "@/components/AdminFooter";
+import Sidebar from "@/components/AdminSidebar";
 
 // ✅ Centralized department mapping
 const DEPARTMENT_CODES = {
@@ -26,7 +26,7 @@ export default function AddStudent() {
   const [gender, setGender] = useState("");
   const [department, setDepartment] = useState("");
   const [year, setYear] = useState("");
-  const [section, setSection] = useState("");
+  const [section, setSection] = useState("-");
   const [address, setAddress] = useState("");
   const [status, setStatus] = useState("Active");
   const [rollNo, setRollNo] = useState("");
@@ -58,13 +58,38 @@ export default function AddStudent() {
     generateRollNo();
   }, [year, department]);
 
+  const validateInputs = () => {
+    if (!name || !email || !phone || !dob || !gender || !department || !year || !address) {
+      alert("Please fill all required fields!");
+      return false;
+    }
+    if (!/^\d{10}$/.test(phone)) {
+      alert("Phone number must be 10 digits!");
+      return false;
+    }
+    const age = new Date().getFullYear() - new Date(dob).getFullYear();
+    if (age < 17) {
+      alert("Student must be at least 17 years old!");
+      return false;
+    }
+    return true;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!rollNo) return alert("Roll number generation failed!");
+    if (!validateInputs()) return;
 
     const studentData = { rollNo, name, email, phone, gender, dob, department, year, section, address, status };
-    await setDoc(doc(db, "students", rollNo), studentData);
-    router.push("/admin/students");
+
+    try {
+      await setDoc(doc(db, "students", rollNo), studentData);
+      alert("Student added successfully!");
+      router.push("/admin/students");
+    } catch (error) {
+      console.error("Error adding student:", error);
+      alert("Failed to add student. Please try again.");
+    }
   };
 
   return (
@@ -80,7 +105,7 @@ export default function AddStudent() {
             <div>
               <Input label="Name" value={name} setValue={setName} />
               <Input label="Email" type="email" value={email} setValue={setEmail} />
-              <Input label="Phone Number" type="tel" value={phone} setValue={setPhone} />
+              <Input label="Phone Number" type="tel" value={phone} setValue={setPhone} maxLength={10} />
               <Input label="Date of Birth" type="date" value={dob} setValue={setDob} />
               <Select label="Gender" value={gender} setValue={setGender} options={{ "": "Select Gender", M: "Male", F: "Female" }} />
             </div>
@@ -110,17 +135,17 @@ export default function AddStudent() {
 }
 
 // 🔥 Reusable Styled Input Component
-function Input({ label, type = "text", value, setValue, readOnly = false }) {
+function Input({ label, type = "text", value, setValue, readOnly = false, maxLength }) {
   return (
     <div className="mb-4">
       <label className="block text-gray-600 font-semibold">{label}</label>
       <input
         type={type}
-        className={`w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400 ${readOnly ? "bg-gray-200 cursor-not-allowed" : "hover:shadow-md transition"
-          }`}
+        className={`w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400 ${readOnly ? "bg-gray-200 cursor-not-allowed" : "hover:shadow-md transition"}`}
         value={value}
         onChange={(e) => setValue(e.target.value)}
         readOnly={readOnly}
+        maxLength={maxLength}
         required
       />
     </div>

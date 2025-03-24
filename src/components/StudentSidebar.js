@@ -25,13 +25,6 @@ export default function StudentSidebar() {
             </Link>
           </li>
           <li>
-            <Link href="/student/attendance">
-              <span className="block p-3 hover:bg-gray-800 rounded transition">
-                ✅ Mark Attendance
-              </span>
-            </Link>
-          </li>
-          <li>
             <Link href="/student/attendance-history">
               <span className="block p-3 hover:bg-gray-800 rounded transition">
                 📅 Attendance History
