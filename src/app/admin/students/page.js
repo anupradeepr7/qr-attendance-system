@@ -11,7 +11,37 @@ export default function StudentsList() {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+  const DEPARTMENT_CODES = {
+    "101": "B.Sc Computer Science",
+    "102": "BA English",
+    "103": "BBA",
+    "104": "B.Com",
+    "105": "B.Sc Mathematics",
+    "106": "B.Sc Physics",
+    "107": "B.Sc Chemistry",
+    "108": "B.Sc Botany",
+    "109": "B.Sc Zoology",
+    "110": "BA History",
+    "111": "BA Economics",
+    "112": "BA Political Science",
+    "113": "BA Sociology",
+    "114": "B.Com (CA)",
+  
+    "201": "M.Sc Computer Science",
+    "202": "MCA",
+    "203": "MBA",
+    "204": "M.Sc Mathematics",
+    "205": "M.Sc Physics",
+    "206": "M.Sc Chemistry",
+    "207": "M.Sc Botany",
+    "208": "M.Sc Zoology",
+    "209": "MA History",
+    "210": "MA Economics",
+    "211": "MA Political Science",
+    "212": "MA Sociology",
+    "213": "M.Com",
+  };
+  
   useEffect(() => {
     const fetchStudents = async () => {
       try {
@@ -97,7 +127,7 @@ export default function StudentsList() {
                       <td className="border border-gray-300 px-4 py-2">{student.name}</td>
                       <td className="border border-gray-300 px-4 py-2">{student.email}</td>
                       <td className="border border-gray-300 px-4 py-2">{student.phone}</td>
-                      <td className="border border-gray-300 px-4 py-2">{student.department}</td>
+                      <td className="border border-gray-300 px-4 py-2">{DEPARTMENT_CODES[student.department]??'-'}</td>
                       <td className="border border-gray-300 px-4 py-2">{student.year}</td>
                       <td className="border border-gray-300 px-4 py-2">{student.section}</td>
                       <td className="border border-gray-300 px-4 py-2 text-center">
