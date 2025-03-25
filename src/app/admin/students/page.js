@@ -2,35 +2,54 @@
 import { useEffect, useState } from "react";
 import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
 import Link from "next/link";
-import { db } from "@/lib/firebase";
-import AdminProtected from "@/components/AdminProtected";
-
-import Header from "@/components/AdminHeader";
-import Footer from "@/components/AdminFooter";
-import Sidebar from "@/components/AdminSidebar";
+import { db } from "../../../lib/firebase";
+import Header from "../../../components/AdminHeader";
+import Footer from "../../../components/AdminFooter";
+import Sidebar from "../../../components/AdminSidebar";
 
 export default function StudentsList() {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchStudents = async () => {
-      const studentsSnapshot = await getDocs(collection(db, "students"));
-      const studentsData = studentsSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setStudents(studentsData);
-      setLoading(false);
+      try {
+        const studentsRef = collection(db, "students");
+        const studentsSnapshot = await getDocs(studentsRef);
+
+        if (studentsSnapshot.empty) {
+          console.warn("⚠ No students found in Firestore!");
+          setStudents([]); // Ensure empty state is handled
+        } else {
+          console.log("✅ Fetched Students:", studentsSnapshot.docs.map((doc) => doc.data()));
+        }
+
+        const studentsData = studentsSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+        setStudents(studentsData);
+      } catch (error) {
+        console.error("❌ Error fetching students:", error);
+        setError("Failed to load students. Please try again.");
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchStudents();
   }, []);
 
-  const handleDelete = async (rollNo) => {
+  const handleDelete = async (id) => {
     if (confirm("Are you sure you want to delete this student?")) {
-      await deleteDoc(doc(db, "students", rollNo));
-      setStudents(students.filter((student) => student.rollNo !== rollNo));
+      try {
+        await deleteDoc(doc(db, "students", id));
+        setStudents(students.filter((student) => student.id !== id));
+      } catch (error) {
+        console.error("❌ Error deleting student:", error);
+      }
     }
   };
 
@@ -41,6 +60,7 @@ export default function StudentsList() {
         <Header />
         <div className="bg-white p-6 rounded-lg shadow-lg">
           <h1 className="text-3xl font-bold text-center text-gray-700 mb-6">Manage Students</h1>
+
           <div className="flex justify-end mb-4">
             <Link href="/admin/students/add">
               <button className="bg-gradient-to-r from-blue-500 to-purple-500 text-white py-2 px-6 rounded-full text-lg font-semibold hover:scale-105 transition transform">
@@ -48,44 +68,53 @@ export default function StudentsList() {
               </button>
             </Link>
           </div>
+
           {loading ? (
             <p className="text-center text-gray-500">Loading students...</p>
+          ) : error ? (
+            <p className="text-center text-red-500">{error}</p>
+          ) : students.length === 0 ? (
+            <p className="text-center text-gray-500">No students found.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse border border-gray-300">
                 <thead>
-                  <tr className="bg-gray-200 text-gray-700">
-                    <th className="border border-gray-300 p-3">Roll Number</th>
-                    <th className="border border-gray-300 p-3">Name</th>
-                    <th className="border border-gray-300 p-3">Date of Birth</th>
-                    <th className="border border-gray-300 p-3 text-center">Actions</th>
+                  <tr className="bg-gray-200">
+                    <th className="border border-gray-300 px-4 py-2">Roll No</th>
+                    <th className="border border-gray-300 px-4 py-2">Name</th>
+                    <th className="border border-gray-300 px-4 py-2">Email</th>
+                    <th className="border border-gray-300 px-4 py-2">Phone</th>
+                    <th className="border border-gray-300 px-4 py-2">Department</th>
+                    <th className="border border-gray-300 px-4 py-2">Year</th>
+                    <th className="border border-gray-300 px-4 py-2">Section</th>
+                    <th className="border border-gray-300 px-4 py-2">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {students.length > 0 ? (
-                    students.map((student) => (
-                      <tr key={student.id} className="text-center bg-white hover:bg-gray-100">
-                        <td className="border border-gray-300 p-3">{student.rollNo}</td>
-                        <td className="border border-gray-300 p-3">{student.name}</td>
-                        <td className="border border-gray-300 p-3">{student.dob}</td>
-                        <td className="border border-gray-300 p-3">
-                          <Link href={`/admin/students/edit/${student.rollNo}`}>
-                            <button className="bg-yellow-500 text-white px-3 py-1 rounded mx-1 hover:scale-105 transition">✏ Edit</button>
-                          </Link>
-                          <button
-                            onClick={() => handleDelete(student.rollNo)}
-                            className="bg-red-500 text-white px-3 py-1 rounded mx-1 hover:scale-105 transition"
-                          >
-                            🗑 Delete
+                  {students.map((student) => (
+                    <tr key={student.id} className="hover:bg-gray-100">
+                      <td className="border border-gray-300 px-4 py-2">{student.rollNo}</td>
+                      <td className="border border-gray-300 px-4 py-2">{student.name}</td>
+                      <td className="border border-gray-300 px-4 py-2">{student.email}</td>
+                      <td className="border border-gray-300 px-4 py-2">{student.phone}</td>
+                      <td className="border border-gray-300 px-4 py-2">{student.department}</td>
+                      <td className="border border-gray-300 px-4 py-2">{student.year}</td>
+                      <td className="border border-gray-300 px-4 py-2">{student.section}</td>
+                      <td className="border border-gray-300 px-4 py-2 text-center">
+                        <Link href={`/admin/students/edit/${student.id}`}>
+                          <button className="bg-green-500 text-white px-4 py-2 rounded mr-2 hover:scale-105 transition">
+                            ✏️ Edit
                           </button>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="4" className="p-4 text-gray-600 text-center">No students found.</td>
+                        </Link>
+                        <button
+                          onClick={() => handleDelete(student.id)}
+                          className="bg-red-500 text-white px-4 py-2 rounded hover:scale-105 transition"
+                        >
+                          🗑️ Delete
+                        </button>
+                      </td>
                     </tr>
-                  )}
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -93,6 +122,6 @@ export default function StudentsList() {
         </div>
         <Footer />
       </div>
-    </div> 
+    </div>
   );
 }

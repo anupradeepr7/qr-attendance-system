@@ -1,10 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
-import { db } from "@/lib/firebase";
+import { db } from "../../../lib/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
-import StudentHeader from "@/components/StudentHeader";
-import StudentFooter from "@/components/StudentFooter";
-import StudentSidebar from "@/components/StudentSidebar";
+import StudentHeader from "../../../components/StudentHeader";
+import StudentFooter from "../../../components/StudentFooter";
+import StudentSidebar from "../../../components/StudentSidebar";
 import DataTable from "react-data-table-component";
 
 export default function AttendanceHistory() {
@@ -32,40 +32,98 @@ export default function AttendanceHistory() {
       const q = query(attendanceRef, where("rollNo", "==", rollNo));
       const querySnapshot = await getDocs(q);
 
-      const records = querySnapshot.docs
-        .map((doc) => {
-          const data = doc.data();
+      let groupedAttendance = {};
 
-          // Convert Firestore timestamps to JS dates
-          const scans = data.scans
-            ? data.scans.map((s) => (s.toDate ? s.toDate() : new Date(s)))
-            : [];
+      querySnapshot.docs.forEach((doc) => {
+        const data = doc.data();
 
-          if (scans.length === 0) return null;
+        // ✅ Ensure timestamp is correctly converted
+        let timestamp;
+        if (data.timestamp?.toDate) {
+          timestamp = data.timestamp.toDate();
+        } else if (typeof data.timestamp === "string") {
+          timestamp = new Date(data.timestamp);
+        } else {
+          timestamp = new Date();
+        }
 
-          // First & last scan of the day
-          const punchIn = scans[0];
-          const punchOut = scans.length > 1 ? scans[scans.length - 1] : null;
+        // ✅ Ensure correct date format (YYYY-MM-DD)
+        const dateKey = timestamp.toISOString().split("T")[0];
 
-          return {
-            id: doc.id,
-            date: data.date || "N/A",
-            punchIn: punchIn ? punchIn.toLocaleTimeString() : "N/A",
-            punchOut: punchOut ? punchOut.toLocaleTimeString() : "N/A",
-            scans, // Store all scans for expandable row
-          };
-        })
-        .filter(Boolean);
+        // ✅ Ensure punchTime is always formatted correctly
+        const timeString = formatTime(data.punchTime, timestamp);
+
+        if (!groupedAttendance[dateKey]) {
+          groupedAttendance[dateKey] = { scans: [] };
+        }
+
+        groupedAttendance[dateKey].scans.push({
+          time: timeString,
+          timestamp: timestamp,
+        });
+      });
+
+      // ✅ Process attendance records (extract first punch-in and last punch-out)
+      const records = Object.keys(groupedAttendance).map((date) => {
+        const scans = groupedAttendance[date].scans.sort((a, b) => a.timestamp - b.timestamp);
+        return {
+          id: date,
+          date: formatDate(date),
+          punchIn: scans[0]?.time || "N/A",
+          punchOut: scans.length > 1 ? scans[scans.length - 1].time : "N/A",
+          scans,
+        };
+      });
 
       setAttendance(records);
       setLoading(false);
     } catch (error) {
-      console.error("Error fetching attendance:", error);
+      console.error("❌ Error fetching attendance:", error);
       setLoading(false);
     }
   };
 
-  // Table columns
+  // ✅ Function to format date as "YYYY-MM-DD" to "March 25, 2025"
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "Invalid Date";
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
+  // ✅ Function to ensure correct time format (9:46:35 AM)
+  const formatTime = (timeString, timestamp) => {
+    if (!timeString || timeString === "Invalid Date") {
+      return timestamp.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      });
+    }
+
+    const date = new Date(`2000-01-01T${timeString}`);
+    if (isNaN(date.getTime())) {
+      return timestamp.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      });
+    }
+
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    });
+  };
+
+  // 📊 Table columns
   const columns = [
     {
       name: "📅 Date",
@@ -73,25 +131,25 @@ export default function AttendanceHistory() {
       sortable: true,
     },
     {
-      name: "⏰ Punch In",
+      name: "⏰ First Punch",
       selector: (row) => row.punchIn,
       sortable: true,
     },
     {
-      name: "⏰ Punch Out",
+      name: "⏰ Last Punch",
       selector: (row) => row.punchOut,
       sortable: true,
     },
   ];
 
-  // Expandable Row Component
+  // 🔍 Expandable Row Component
   const ExpandedRow = ({ data }) => (
     <div className="p-4 bg-gray-50 rounded-md">
       <h3 className="text-lg font-semibold">🔍 All Scans for {data.date}</h3>
       <ul className="list-disc list-inside mt-2">
         {data.scans.map((scan, index) => (
           <li key={index} className="text-gray-600">
-            {new Date(scan).toLocaleTimeString()}
+            {scan.time}
           </li>
         ))}
       </ul>

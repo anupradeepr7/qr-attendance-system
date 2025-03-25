@@ -1,13 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
-import { db, auth } from "@/lib/firebase";
+import { db, auth } from "../../../lib/firebase";
 import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
-import AdminProtected from "@/components/AdminProtected";
+import AdminProtected from "../../../components/AdminProtected";
 
-import Header from "@/components/AdminHeader";
-import Footer from "@/components/AdminFooter";
-import Sidebar from "@/components/AdminSidebar";
+import Header from "../../../components/AdminHeader";
+import Footer from "../../../components/AdminFooter";
+import Sidebar from "../../../components/AdminSidebar";
 
 export default function AdminDashboard() {
   const [adminName, setAdminName] = useState("Admin");

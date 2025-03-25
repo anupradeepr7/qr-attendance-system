@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
-import { db, auth } from "@/lib/firebase";
+import { db, auth } from "../../../lib/firebase";
 
 export default function StudentLogin() {
   const [rollNo, setRollNo] = useState("");

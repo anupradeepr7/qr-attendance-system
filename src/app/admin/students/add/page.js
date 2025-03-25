@@ -1,21 +1,44 @@
 "use client";
 import { useState, useEffect } from "react";
 import { collection, doc, setDoc, getDocs, query, where, orderBy, limit } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db } from "../../../../lib/firebase";
 import { useRouter } from "next/navigation";
-import Header from "@/components/AdminHeader";
-import Footer from "@/components/AdminFooter";
-import Sidebar from "@/components/AdminSidebar";
+import Header from "../../../../components/AdminHeader";
+import Footer from "../../../../components/AdminFooter";
+import Sidebar from "../../../../components/AdminSidebar";
 
 // ✅ Centralized department mapping
+
+// Department Mapping
 const DEPARTMENT_CODES = {
-  "B.Sc Computer Science": "101",
-  "BA English": "102",
-  "BBA": "103",
-  "B.Com": "104",
-  "M.Sc Computer Science": "201",
-  "MCA": "202",
-  "MBA": "203",
+  "101": "B.Sc Computer Science",
+  "102": "BA English",
+  "103": "BBA",
+  "104": "B.Com",
+  "105": "B.Sc Mathematics",
+  "106": "B.Sc Physics",
+  "107": "B.Sc Chemistry",
+  "108": "B.Sc Botany",
+  "109": "B.Sc Zoology",
+  "110": "BA History",
+  "111": "BA Economics",
+  "112": "BA Political Science",
+  "113": "BA Sociology",
+  "114": "B.Com (CA)",
+
+  "201": "M.Sc Computer Science",
+  "202": "MCA",
+  "203": "MBA",
+  "204": "M.Sc Mathematics",
+  "205": "M.Sc Physics",
+  "206": "M.Sc Chemistry",
+  "207": "M.Sc Botany",
+  "208": "M.Sc Zoology",
+  "209": "MA History",
+  "210": "MA Economics",
+  "211": "MA Political Science",
+  "212": "MA Sociology",
+  "213": "M.Com",
 };
 
 export default function AddStudent() {
@@ -38,25 +61,31 @@ export default function AddStudent() {
       if (!year || !department) return;
 
       const admissionYear = new Date().getFullYear().toString().slice(-2);
-      const ugOrPg = department.includes("M") ? "02" : "01";
-      const deptCode = DEPARTMENT_CODES[department] || "999";
+      const deptCode = department; // department is already the correct numeric code
 
       const studentsRef = collection(db, "students");
-      const q = query(studentsRef, where("department", "==", department), orderBy("rollNo", "desc"), limit(1));
+      const q = query(
+        studentsRef,
+        where("department", "==", DEPARTMENT_CODES[department]),
+        orderBy("rollNo", "desc"),
+        limit(1)
+      );
+
       const snapshot = await getDocs(q);
       let serialNumber = "001";
 
       if (!snapshot.empty) {
         const lastRollNo = snapshot.docs[0].data().rollNo;
-        const lastSerial = parseInt(lastRollNo.slice(-3));
+        const lastSerial = parseInt(lastRollNo.slice(-3), 10);
         serialNumber = String(lastSerial + 1).padStart(3, "0");
       }
 
-      setRollNo(`${admissionYear}${ugOrPg}${deptCode}${serialNumber}`);
+      setRollNo(`${admissionYear}${deptCode}${serialNumber}`);
     };
 
     generateRollNo();
   }, [year, department]);
+
 
   const validateInputs = () => {
     if (!name || !email || !phone || !dob || !gender || !department || !year || !address) {

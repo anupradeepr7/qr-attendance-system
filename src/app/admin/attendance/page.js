@@ -1,147 +1,184 @@
 "use client";
 import { useEffect, useState } from "react";
+import { db } from "../../../lib/firebase";
 import { collection, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import Sidebar from "@/components/AdminSidebar";
-import Header from "@/components/AdminHeader";
-import Footer from "@/components/AdminFooter";
+import Sidebar from "../../../components/AdminSidebar";
+import Header from "../../../components/AdminHeader";
+import Footer from "../../../components/AdminFooter";
+import DataTable from "react-data-table-component";
 
-export default function AttendancePage() {
+export default function AdminAttendancePage() {
   const [attendance, setAttendance] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchRollNo, setSearchRollNo] = useState("");
-  const [searchDate, setSearchDate] = useState("");
 
   useEffect(() => {
-    const fetchAttendance = async () => {
-      try {
-        const attendanceSnapshot = await getDocs(collection(db, "attendance"));
-        const attendanceData = attendanceSnapshot.docs.map((doc) => {
-          const data = doc.data();
-
-          return {
-            id: doc.id,
-            rollNo: data.rollNo,
-            date: data.date, // Already stored as string, so no reformatting needed
-            punchIn: data.punchIn?.toDate() || null,
-            punchOut: data.punchOut?.toDate() || null,
-          };
-        });
-
-        setAttendance(attendanceData);
-      } catch (error) {
-        console.error("Error fetching attendance:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchAttendance();
   }, []);
 
-  // ✅ Store formatted timestamps in state to avoid SSR mismatch
-  const [formattedAttendance, setFormattedAttendance] = useState([]);
+  const fetchAttendance = async () => {
+    try {
+      const attendanceRef = collection(db, "attendance");
+      const querySnapshot = await getDocs(attendanceRef);
 
-  useEffect(() => {
-    setFormattedAttendance(
-      attendance.map((record) => ({
-        ...record,
-        punchIn: record.punchIn
-          ? new Intl.DateTimeFormat("en-US", {
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-              hour12: true,
-            }).format(record.punchIn)
-          : "N/A",
-        punchOut: record.punchOut
-          ? new Intl.DateTimeFormat("en-US", {
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-              hour12: true,
-            }).format(record.punchOut)
-          : "N/A",
-      }))
-    );
-  }, [attendance]);
+      let groupedAttendance = {};
 
-  // ✅ Apply Filters
-  const filteredAttendance = formattedAttendance.filter((record) => {
-    return (
-      (searchRollNo === "" || record.rollNo.toLowerCase().includes(searchRollNo.toLowerCase())) &&
-      (searchDate === "" || record.date === searchDate)
-    );
-  });
+      querySnapshot.docs.forEach((doc) => {
+        const data = doc.data();
+        const rollNo = data.rollNo;
+
+        // ✅ Ensure timestamp is correctly converted
+        let timestamp;
+        if (data.timestamp?.toDate) {
+          timestamp = data.timestamp.toDate();
+        } else if (typeof data.timestamp === "string") {
+          timestamp = new Date(data.timestamp);
+        } else {
+          timestamp = new Date();
+        }
+
+        // ✅ Ensure correct date format (YYYY-MM-DD)
+        const dateKey = timestamp.toISOString().split("T")[0];
+
+        // ✅ Ensure punchTime is always formatted correctly
+        const timeString = formatTime(data.punchTime, timestamp);
+
+        if (!groupedAttendance[rollNo]) {
+          groupedAttendance[rollNo] = {};
+        }
+
+        if (!groupedAttendance[rollNo][dateKey]) {
+          groupedAttendance[rollNo][dateKey] = { scans: [] };
+        }
+
+        groupedAttendance[rollNo][dateKey].scans.push({
+          time: timeString,
+          timestamp: timestamp,
+        });
+      });
+
+      // ✅ Process attendance records (extract first punch-in and last punch-out)
+      const records = [];
+      Object.keys(groupedAttendance).forEach((rollNo) => {
+        Object.keys(groupedAttendance[rollNo]).forEach((date) => {
+          const scans = groupedAttendance[rollNo][date].scans.sort((a, b) => a.timestamp - b.timestamp);
+          records.push({
+            id: `${rollNo}-${date}`,
+            rollNo,
+            date: formatDate(date),
+            punchIn: scans[0]?.time || "N/A",
+            punchOut: scans.length > 1 ? scans[scans.length - 1].time : "N/A",
+            scans,
+          });
+        });
+      });
+
+      setAttendance(records);
+      setLoading(false);
+    } catch (error) {
+      console.error("❌ Error fetching attendance:", error);
+      setLoading(false);
+    }
+  };
+
+  // ✅ Function to format date as "YYYY-MM-DD" to "March 25, 2025"
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "Invalid Date";
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
+  // ✅ Function to ensure correct time format (9:46:35 AM)
+  const formatTime = (timeString, timestamp) => {
+    if (!timeString || timeString === "Invalid Date") {
+      return timestamp.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      });
+    }
+
+    const date = new Date(`2000-01-01T${timeString}`);
+    if (isNaN(date.getTime())) {
+      return timestamp.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      });
+    }
+
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    });
+  };
+
+  // 📊 Table columns
+  const columns = [
+    {
+      name: "📌 Roll Number",
+      selector: (row) => row.rollNo,
+      sortable: true,
+    },
+    {
+      name: "📅 Date",
+      selector: (row) => row.date,
+      sortable: true,
+    },
+    {
+      name: "⏰ First Punch",
+      selector: (row) => row.punchIn,
+      sortable: true,
+    },
+    {
+      name: "⏰ Last Punch",
+      selector: (row) => row.punchOut,
+      sortable: true,
+    },
+  ];
+
+  // 🔍 Expandable Row Component
+  const ExpandedRow = ({ data }) => (
+    <div className="p-4 bg-gray-50 rounded-md">
+      <h3 className="text-lg font-semibold">🔍 All Scans for {data.date} (Roll No: {data.rollNo})</h3>
+      <ul className="list-disc list-inside mt-2">
+        {data.scans.map((scan, index) => (
+          <li key={index} className="text-gray-600">
+            {scan.time}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 
   return (
     <div className="flex">
       <Sidebar />
-      <div className="flex-1 p-6">
+      <div className="flex-1 p-6 bg-gray-100 min-h-screen">
         <Header />
-        <div className="bg-white p-6 rounded-lg shadow-lg">
-          <h1 className="text-2xl font-bold mb-4">📌 Student Attendance</h1>
+        <h1 className="text-2xl font-bold">📌 Attendance Records</h1>
+        <p className="mt-2 text-gray-600">View all student attendance records.</p>
 
-          {/* 🔎 Filters */}
-          <div className="mb-4 flex gap-4">
-            <input
-              type="text"
-              placeholder="Search by Roll No"
-              className="p-2 border rounded w-1/3"
-              value={searchRollNo}
-              onChange={(e) => setSearchRollNo(e.target.value)}
-            />
-            <input
-              type="date"
-              className="p-2 border rounded w-1/3"
-              value={searchDate}
-              onChange={(e) => setSearchDate(e.target.value)}
-            />
-            <button
-              className="p-2 bg-red-500 text-white rounded"
-              onClick={() => {
-                setSearchRollNo("");
-                setSearchDate("");
-              }}
-            >
-              Reset
-            </button>
-          </div>
-
-          {/* 📜 Attendance Table */}
+        <div className="mt-6 bg-white shadow-md rounded-lg p-4">
           {loading ? (
             <p>Loading...</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full bg-white border border-gray-300">
-                <thead>
-                  <tr className="bg-gray-200">
-                    <th className="py-2 px-4 border">Roll Number</th>
-                    <th className="py-2 px-4 border">Date</th>
-                    <th className="py-2 px-4 border">Punch-In</th>
-                    <th className="py-2 px-4 border">Punch-Out</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredAttendance.length === 0 ? (
-                    <tr>
-                      <td colSpan="4" className="text-center py-4">
-                        No attendance records found.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredAttendance.map((record) => (
-                      <tr key={record.id} className="border">
-                        <td className="py-2 px-4 border">{record.rollNo}</td>
-                        <td className="py-2 px-4 border">{record.date}</td>
-                        <td className="py-2 px-4 border">{record.punchIn}</td>
-                        <td className="py-2 px-4 border">{record.punchOut}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              columns={columns}
+              data={attendance}
+              pagination
+              highlightOnHover
+              responsive
+              expandableRows
+              expandableRowsComponent={ExpandedRow}
+            />
           )}
         </div>
         <Footer />

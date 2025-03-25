@@ -1,19 +1,18 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { db } from "@/lib/firebase";
+import { db } from "../../../lib/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
-import { FaUserGraduate, FaCalendarCheck, FaClock, FaBell, FaBookOpen } from "react-icons/fa";
-import StudentHeader from "@/components/StudentHeader";
-import StudentFooter from "@/components/StudentFooter";
-import StudentSidebar from "@/components/StudentSidebar";
+import { FaUserGraduate, FaClock, FaBell, FaBookOpen } from "react-icons/fa";
+import StudentSidebar from "../../../components/StudentSidebar";
+import StudentHeader from "../../../components/StudentHeader";
+import StudentFooter from "../../../components/StudentFooter";
 
 export default function StudentDashboard() {
   const router = useRouter();
   const [student, setStudent] = useState(null);
   const [firstPunchIn, setFirstPunchIn] = useState(null);
   const [lastPunchOut, setLastPunchOut] = useState(null);
-  const [totalAttendance, setTotalAttendance] = useState(0);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -42,30 +41,40 @@ export default function StudentDashboard() {
       const q = query(attendanceRef, where("rollNo", "==", rollNo));
       const querySnapshot = await getDocs(q);
 
-      const today = new Date().setHours(0, 0, 0, 0);
-      const allAttendance = querySnapshot.docs.map(doc => doc.data());
+      let todayScans = [];
 
-      setTotalAttendance(allAttendance.length);
+      const todayDate = new Date();
+      const todayString = todayDate.toISOString().split("T")[0]; // Format as YYYY-MM-DD
 
-      const todayRecords = allAttendance.filter(attendance =>
-        attendance.scans?.some(scan =>
-          new Date(scan.seconds * 1000).setHours(0, 0, 0, 0) === today
-        )
-      );
+      querySnapshot.docs.forEach((doc) => {
+        const data = doc.data();
+        let timestamp = data.timestamp?.toDate ? data.timestamp.toDate() : new Date(data.timestamp);
 
-      if (todayRecords.length > 0) {
-        const todayScans = todayRecords.flatMap(attendance =>
-          attendance.scans.map(scan => new Date(scan.seconds * 1000))
-        );
+        const entryDate = timestamp.toISOString().split("T")[0]; // Extract YYYY-MM-DD
 
-        todayScans.sort((a, b) => a - b); // Sort by time
+        if (entryDate === todayString) {
+          todayScans.push(timestamp);
+        }
+      });
 
-        setFirstPunchIn(todayScans[0]?.toLocaleTimeString() || "N/A");
-        setLastPunchOut(todayScans[todayScans.length - 1]?.toLocaleTimeString() || "N/A");
-      }
+      todayScans.sort((a, b) => a - b); // Sort by time
+
+      setFirstPunchIn(todayScans.length > 0 ? formatTime(todayScans[0]) : "Not Marked Yet");
+      setLastPunchOut(todayScans.length > 1 ? formatTime(todayScans[todayScans.length - 1]) : "Not Marked Yet");
+
     } catch (error) {
       console.error("Error fetching attendance:", error);
     }
+  };
+
+  // ✅ Convert date object to readable time format
+  const formatTime = (date) => {
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    });
   };
 
   return (
@@ -75,8 +84,12 @@ export default function StudentDashboard() {
         <StudentHeader />
         <main className="p-6 bg-gray-100 min-h-screen">
           <div className="max-w-5xl mx-auto">
-            <h1 className="text-3xl font-bold text-gray-700">🎓 Welcome, {student?.name || "Student"}!</h1>
-            <p className="text-gray-600 mt-1">Your student dashboard provides all your academic details.</p>
+            <h1 className="text-3xl font-bold text-gray-700">
+              🎓 Welcome, {student?.name || "Student"}!
+            </h1>
+            <p className="text-gray-600 mt-1">
+              Your student dashboard provides all your academic details.
+            </p>
 
             {/* Student Profile Card */}
             <div className="mt-6 bg-white shadow-lg rounded-lg p-6 flex items-center gap-4">
@@ -91,31 +104,19 @@ export default function StudentDashboard() {
 
             {/* Attendance & Stats */}
             <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* <div className="bg-white shadow-lg rounded-lg p-6 flex items-center gap-4">
-                <FaCalendarCheck className="text-green-500 text-5xl" />
-                <div>
-                  <h2 className="text-xl font-semibold">{totalAttendance}</h2>
-                  <p className="text-gray-600">Total Attendance Days</p>
-                </div>
-              </div> */}
-
               <div className="bg-white shadow-lg rounded-lg p-6 flex items-center gap-4">
                 <FaClock className="text-purple-500 text-5xl" />
                 <div>
-                  <h2 className="text-xl font-semibold">
-                    {firstPunchIn ? firstPunchIn : "Not Marked Yet"}
-                  </h2>
-                  <p className="text-gray-600">Today's First Punch-in</p>
+                  <h2 className="text-xl font-semibold">{firstPunchIn}</h2>
+                  <p className="text-gray-600">Today's First Punch</p>
                 </div>
               </div>
 
               <div className="bg-white shadow-lg rounded-lg p-6 flex items-center gap-4">
                 <FaClock className="text-red-500 text-5xl" />
                 <div>
-                  <h2 className="text-xl font-semibold">
-                    {lastPunchOut ? lastPunchOut : "Not Marked Yet"}
-                  </h2>
-                  <p className="text-gray-600">Today's Last Punch-out</p>
+                  <h2 className="text-xl font-semibold">{lastPunchOut}</h2>
+                  <p className="text-gray-600">Today's Last Punch</p>
                 </div>
               </div>
             </div>

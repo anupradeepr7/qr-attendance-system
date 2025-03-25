@@ -9,13 +9,13 @@ import {
   updateDoc,
   doc,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db } from "../../../lib/firebase";
 import CryptoJS from "crypto-js";
 import { Html5QrcodeScanner } from "html5-qrcode";
 import { useRouter } from "next/navigation";
-import StudentHeader from "@/components/StudentHeader";
-import StudentFooter from "@/components/StudentFooter";
-import StudentSidebar from "@/components/StudentSidebar";
+import StudentHeader from "../../../components/StudentHeader";
+import StudentFooter from "../../../components/StudentFooter";
+import StudentSidebar from "../../../components/StudentSidebar";
 
 const SECRET_KEY = process.env.NEXT_PUBLIC_SECRET_KEY || "default-secret";
 

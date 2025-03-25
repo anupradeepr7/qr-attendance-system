@@ -1,11 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
-import { db } from "@/lib/firebase";
+import { db } from "../../lib/firebase";
 import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
 import Link from "next/link";
-import Header from "@/components/AdminHeader";
-import Footer from "@/components/AdminFooter";
-import Sidebar from "@/components/AdminSidebar";
+import Header from "../../components/AdminHeader";
+import Footer from "../../components/AdminFooter";
+import Sidebar from "../../components/AdminSidebar";
 
 export default function StudentsPage() {
   const [students, setStudents] = useState([]);

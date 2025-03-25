@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { signInWithPopup } from "firebase/auth";
-import { auth, provider, db } from "@/lib/firebase";
+import { auth, provider, db } from "../../lib/firebase";
 import { collection, query, where, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
 console.log("🔥 Firebase Auth:", auth);
 console.log("🔥 Google Provider:", provider);
@@ -36,10 +36,18 @@ export default function AuthPage() {
           const student = snapshot.docs[0].data();
           console.log("🎓 Student Found in Database:", student);
 
+          // 🕒 Ensure punchTime is always formatted as "hh:mm:ss AM/PM"
+          const formattedTime = new Date().toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: true,
+          });
+
           const attendanceData = {
             rollNo: student.rollNo,
             email: student.email,
-            punchTime: new Date().toLocaleTimeString(),
+            punchTime: formattedTime, // ✅ Corrected Time Format
             timestamp: serverTimestamp(),
           };
 
